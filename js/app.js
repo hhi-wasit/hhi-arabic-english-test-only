@@ -1,3 +1,8 @@
+// ===== SUPABASE SETUP =====
+const SUPABASE_URL = 'https://ymlgjkoxupwnqklhwndi.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InltbGdqa294dXB3bnFrbGh3bmRpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0NTcyNjksImV4cCI6MjA5NTAzMzI2OX0.IYvY9lf_0tY2LqYDGS0q095OYwIYbPGt_ziz-snRUqI';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 // ===== SHARED DATA STORE (localStorage-backed) =====
 const HHI = {
 
@@ -43,7 +48,6 @@ const HHI = {
       localStorage.setItem('hhi_thesis_file_' + id, dataUrl);
       return true;
     } catch(e) {
-      // localStorage quota exceeded
       console.warn('Storage quota exceeded for thesis file', id);
       return false;
     }
@@ -55,17 +59,34 @@ const HHI = {
     localStorage.removeItem('hhi_thesis_file_' + id);
   },
 
-  // --- AUTH ---
-  ADMIN_USER: 'admin',
-  ADMIN_PASS: 'hhi2025',
-  isLoggedIn() { return sessionStorage.getItem('hhi_admin') === 'true'; },
-  login(u, p) {
-    if (u === HHI.ADMIN_USER && p === HHI.ADMIN_PASS) {
-      sessionStorage.setItem('hhi_admin', 'true'); return true;
-    }
-    return false;
+  // --- AUTH (Supabase-backed) ---
+  isLoggedIn() {
+    return sessionStorage.getItem('hhi_admin') === 'true';
   },
-  logout() { sessionStorage.removeItem('hhi_admin'); }
+
+  async login(username, password) {
+    try {
+      const { data, error } = await _supabase
+        .from('admins')
+        .select('id')
+        .eq('username', username)
+        .eq('password', password)
+        .single();
+
+      if (data && !error) {
+        sessionStorage.setItem('hhi_admin', 'true');
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.error('Login error:', err);
+      return false;
+    }
+  },
+
+  logout() {
+    sessionStorage.removeItem('hhi_admin');
+  }
 };
 
 // ===== UTILITY =====
